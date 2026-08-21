@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Fun Quest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .scene {
+            background-size: cover;
+            background-position: center;
+            height: 300px;
+            border-radius: 10px;
+            position: relative;
+        }
+        .character {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: all 0.3s;
+        }
+        .dance-animation { animation: dance 1s infinite; }
+        @keyframes dance {
+            0% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-10px); }
+            100% { transform: translateX(-50%) translateY(0); }
+        }
+        .option-button, .submit-button {
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .option-button:hover, .submit-button:hover {
+            transform: scale(1.1);
+        }
+        .correct { background-color: #22c55e !important; }
+        .incorrect { background-color: #ef4444 !important; }
+    </style>
+</head>
+<body class="bg-yellow-100 flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full">
+        <h1 class="text-3xl font-bold text-center text-orange-600 mb-4">English Fun Quest</h1>
+        <p class="text-center text-gray-700 mb-2">Help Sunny answer fun questions!</p>
+        <p class="text-center text-gray-700 mb-4">Помоги Санни отвечать на весёлые вопросы!</p>
+        <div class="flex justify-between mb-4">
+            <p id="stars" class="text-lg font-semibold">Stars: <span id="star-count">0</span> ⭐</p>
+            <p id="area" class="text-lg font-semibold">Area: Forest</p>
+        </div>
+        <div id="scene" class="scene bg-green-200 mb-4 flex items-center justify-center">
+            <img id="character" class="character" src="https://cdn.pixabay.com/photo/2016/06/08/09/20/baby-girl-1443464_1280.png" alt="Sunny" width="200">
+        </div>
+        <p id="question" class="text-xl font-semibold text-center text-blue-600 mb-4"></p>
+        <div id="options" class="flex flex-wrap justify-center gap-4 mb-4"></div>
+        <input id="text-answer" type="text" placeholder="Type your answer" class="hidden w-full p-2 mb-2 border rounded">
+        <button id="submit-button" class="submit-button bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 hidden">Submit</button>
+        <p id="feedback" class="text-center text-lg mb-4"></p>
+        <button onclick="nextQuestion()" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600">Next Question</button>
+        <button onclick="speakQuestion()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2">Listen</button>
+    </div>
+
+    <script>
+        const questions = [
+            { text: "What’s your name?", type: "text", hint: "Tell me your name!", area: "forest" },
+            { text: "How old are you?", type: "text", hint: "Say a number like 9!", area: "forest" },
+            { text: "How are you today?", type: "choice", options: ["Happy", "Good", "Okay"], correct: "Happy", hint: "How do you feel?", area: "forest" },
+            { text: "Do you like English?", type: "choice", options: ["Yes", "No", "A little"], correct: "Yes", hint: "Do you enjoy it?", area: "forest" },
+            { text: "What’s your favorite color?", type: "choice", options: ["Red", "Blue", "Pink"], correct: "Red", hint: "Pick a color!", area: "beach" },
+            { text: "Do you have a cat or a dog?", type: "choice", options: ["Yes, I have a cat", "Yes, I have a dog", "No, but I like dogs"], correct: "Yes, I have a cat", hint: "Do you have a pet?", area: "beach" },
+            { text: "What’s this?", type: "choice", options: ["Apple", "Book", "Ball"], correct: "Apple", hint: "Look at the picture!", area: "beach" },
+            { text: "Is this a pen or a pencil?", type: "choice", options: ["Pen", "Pencil"], correct: "Pencil", hint: "What’s in my hand?", area: "beach" },
+            { text: "Do you like ice cream?", type: "choice", options: ["Yes", "No"], correct: "Yes", hint: "Do you like sweet food?", area: "space" },
+            { text: "Is the sky blue?", type: "choice", options: ["Yes", "No, it’s gray today"], correct: "Yes", hint: "What color is the sky?", area: "space" },
+            { text: "Do you have a brother or sister?", type: "choice", options: ["Yes", "No"], correct: "Yes", hint: "Do you have siblings?", area: "space" },
+            { text: "Can you swim?", type: "choice", options: ["Yes", "No"], correct: "Yes", hint: "Can you swim in water?", area: "space" },
+            { text: "Do you like cats or dogs more?", type: "choice", options: ["Cats", "Dogs"], correct: "Cats", hint: "Which pet do you like?", area: "space" },
+            { text: "How many fingers do I have?", type: "text", hint: "Count my fingers!", area: "forest" },
+            { text: "Count with me: 1, 2, 3… Can you go to 10?", type: "action", hint: "Count out loud to 10!", area: "forest" },
+            { text: "Can you jump like a rabbit?", type: "action", hint: "Jump on camera!", area: "beach" },
+            { text: "What’s your favorite animal?", type: "choice", options: ["Lion", "Rabbit", "Horse"], correct: "Rabbit", hint: "Pick an animal!", area: "beach" },
+            { text: "Do you like to draw?", type: "choice", options: ["Yes", "No"], correct: "Yes", hint: "Do you like art?", area: "beach" },
+            { text: "Can you sing?", type: "action", hint: "Sing a little song!", area: "space" },
+            { text: "Do you want to play a game?", type: "choice", options: ["Yes", "No"], correct: "Yes", hint: "Do you want fun?", area: "space" }
+        ];
+
+        let currentQuestionIndex = 0;
+        let stars = 0;
+        const areas = {
+            forest: "https://pixabay.com/get/g1e7c2a7d6a0b7e2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8b8.jpg",
+            beach: "https://pixabay.com/get/g2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8b8f3a7c4b7d6.jpg",
+            space: "https://pixabay.com/get/g3a7c4b7d6a0b7e2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8b8f3a7c4b7d6a0b7e2f3e1b8.jpg"
+        };
+
+        function startGame() {
+            const question = questions[currentQuestionIndex];
+            document.getElementById("question").textContent = question.text;
+            document.getElementById("scene").style.backgroundImage = `url(${areas[question.area]})`;
+            document.getElementById("area").textContent = `Area: ${question.area.charAt(0).toUpperCase() + question.area.slice(1)}`;
+            const optionsDiv = document.getElementById("options");
+            const textAnswer = document.getElementById("text-answer");
+            const submitButton = document.getElementById("submit-button");
+            optionsDiv.innerHTML = "";
+            textAnswer.classList.add("hidden");
+            submitButton.classList.add("hidden");
+
+            if (question.type === "choice") {
+                question.options.forEach(option => {
+                    const button = document.createElement("button");
+                    button.className = "option-button bg-orange-500 text-white";
+                    button.textContent = option;
+                    button.onclick = () => selectOption(option, question.correct, question.hint);
+                    optionsDiv.appendChild(button);
+                });
+            } else if (question.type === "text") {
+                textAnswer.classList.remove("hidden");
+                submitButton.classList.remove("hidden");
+                submitButton.onclick = () => checkTextAnswer(question.hint);
+            } else if (question.type === "action") {
+                optionsDiv.innerHTML = '<button class="option-button bg-orange-500 text-white" onclick="checkAction(question.hint)">Show Me!</button>';
+            }
+            document.getElementById("feedback").textContent = "";
+            document.getElementById("character").classList.remove("dance-animation");
+        }
+
+        function selectOption(selected, correct, hint) {
+            const feedback = document.getElementById("feedback");
+            const character = document.getElementById("character");
+            if (selected === correct || (correct === "Yes" && selected.includes("Yes")) || (correct === "No" && selected.includes("No"))) {
+                stars++;
+                document.getElementById("star-count").textContent = stars;
+                feedback.textContent = "Great job! 🎉";
+                feedback.className = "text-green-600";
+                character.classList.add("dance-animation");
+                playSound("correct");
+                if (stars >= 5) {
+                    feedback.textContent = "New Area Unlocked! 🏆";
+                    currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+                    if (stars >= 15) stars = 0; // Reset after max area
+                    setTimeout(nextQuestion, 2000);
+                }
+            } else {
+                feedback.textContent = `Try again! ${hint}`;
+                feedback.className = "text-red-600";
+                playSound("incorrect");
+            }
+        }
+
+        function checkTextAnswer(hint) {
+            const answer = document.getElementById("text-answer").value.trim().toLowerCase();
+            const feedback = document.getElementById("feedback");
+            const character = document.getElementById("character");
+            if (answer === "9" || answer === "nine" || answer === "five" || answer === "my name is [her name]") {
+                stars++;
+                document.getElementById("star-count").textContent = stars;
+                feedback.textContent = "Awesome! 🎉";
+                feedback.className = "text-green-600";
+                character.classList.add("dance-animation");
+                playSound("correct");
+                if (stars >= 5) {
+                    feedback.textContent = "New Area Unlocked! 🏆";
+                    currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+                    if (stars >= 15) stars = 0;
+                    setTimeout(nextQuestion, 2000);
+                }
+            } else {
+                feedback.textContent = `Try again! ${hint}`;
+                feedback.className = "text-red-600";
+                playSound("incorrect");
+            }
+            document.getElementById("text-answer").value = "";
+        }
+
+        function checkAction(hint) {
+            const feedback = document.getElementById("feedback");
+            const character = document.getElementById("character");
+            // Teacher confirms action via Zoom; for demo, assume correct
+            stars++;
+            document.getElementById("star-count").textContent = stars;
+            feedback.textContent = "Well done! 🎉";
+            feedback.className = "text-green-600";
+            character.classList.add("dance-animation");
+            playSound("correct");
+            if (stars >= 5) {
+                feedback.textContent = "New Area Unlocked! 🏆";
+                currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+                if (stars >= 15) stars = 0;
+                setTimeout(nextQuestion, 2000);
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex = (currentQuestionIndex + 1) % questions.length;
+            startGame();
+        }
+
+        function playSound(type) {
+            const audio = new Audio();
+            audio.src = type === "correct" 
+                ? "https://www.soundjay.com/buttons/sounds/button-3.mp3"
+                : "https://www.soundjay.com/buttons/sounds/button-4.mp3";
+            audio.play();
+        }
+
+        function speakQuestion() {
+            const question = questions[currentQuestionIndex];
+            const utterance = new SpeechSynthesisUtterance(question.text);
+            utterance.lang = "en-US";
+            speechSynthesis.speak(utterance);
+        }
+
+        startGame();
+    </script>
+</body>
+</html>
